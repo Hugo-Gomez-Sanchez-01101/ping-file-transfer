@@ -46,21 +46,21 @@ python server.py --list
 
 Output:
 ```
-======================================================================
+================================================================================
 INTERFACES DISPONIBLES
-======================================================================
-Nombre               IP                   Gateway             
-----------------------------------------------------------------------
-lo                   127.0.0.1            192.168.1.1         
-eth0                 192.168.1.100        192.168.1.1         
-wlan0                192.168.1.105        192.168.1.1         
-docker0              172.17.0.1           N/A                 
-======================================================================
+================================================================================
+ID    Nombre               IP                   Gateway             
+--------------------------------------------------------------------------------
+1     lo                   127.0.0.1            192.168.1.1         
+2     eth0                 192.168.1.100        192.168.1.1         
+3     wlan0                192.168.1.105        192.168.1.1         
+4     docker0              172.17.0.1           N/A                 
+================================================================================
 ```
 
 ### 2. Iniciar el servidor
 
-#### Opción A: Auto-detectar loopback
+#### Opción A: Seleccionar interfaz interactivamente
 
 **Linux/macOS:**
 ```bash
@@ -72,7 +72,28 @@ sudo python3 server.py
 python server.py
 ```
 
-#### Opción B: Especificar interfaz
+Salida:
+```
+================================================================================
+INTERFACES DISPONIBLES
+================================================================================
+ID    Nombre               IP                   Gateway             
+--------------------------------------------------------------------------------
+1     lo                   127.0.0.1            192.168.1.1         
+2     eth0                 192.168.1.100        192.168.1.1         
+3     wlan0                192.168.1.105        192.168.1.1         
+================================================================================
+
+Selecciona una interfaz (por ID o nombre): 1
+```
+
+Puedes seleccionar por **ID** (1, 2, 3...) o por **nombre** (lo, eth0, wlan0...)
+
+#### Opción B: Auto-detectar loopback
+
+Si existe una interfaz loopback (lo/lo0), se detectará automáticamente.
+
+#### Opción C: Especificar interfaz directamente
 
 **Linux/macOS:**
 ```bash
@@ -140,17 +161,19 @@ bash client.sh myfile.bin 127.0.0.1
 ## Opciones del servidor
 
 ```
-Uso: python3 server.py [interfaz]
+Uso: python3 server.py [opciones] [interfaz]
 
 Opciones:
   --list, -l      Listar interfaces disponibles
   --help, -h      Mostrar esta ayuda
 
 Ejemplos:
-  python3 server.py              # Auto-detectar loopback
+  python3 server.py              # Seleccionar interfaz interactivamente
   python3 server.py lo           # Usar interfaz 'lo'
+  python3 server.py 1            # Usar ID de interfaz (si --list muestra ID)
   python3 server.py eth0         # Usar interfaz 'eth0'
-  python3 server.py --list       # Listar interfaces
+  python3 server.py --list       # Listar interfaces con ID
+  python3 server.py --help       # Mostrar ayuda
 ```
 
 ## Ejemplo completo

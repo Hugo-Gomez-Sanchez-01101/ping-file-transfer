@@ -81,21 +81,52 @@ def list_interfaces():
     interfaces = get_if_list()
     gateway = get_interface_gateway()
 
-    print("\n" + "=" * 70)
+    print("\n" + "=" * 80)
     print("INTERFACES DISPONIBLES")
-    print("=" * 70)
-    print(f"{'Nombre':<20} {'IP':<20} {'Gateway':<20}")
-    print("-" * 70)
+    print("=" * 80)
+    print(f"{'ID':<5} {'Nombre':<20} {'IP':<20} {'Gateway':<20}")
+    print("-" * 80)
 
-    for iface in interfaces:
+    for idx, iface in enumerate(interfaces, 1):
         try:
             ip = get_if_addr(iface)
         except:
             ip = "N/A"
 
-        print(f"{iface:<20} {ip:<20} {gateway:<20}")
+        print(f"{idx:<5} {iface:<20} {ip:<20} {gateway:<20}")
 
-    print("=" * 70 + "\n")
+    print("=" * 80 + "\n")
+    return interfaces
+
+def select_interface_interactive():
+    """Permitir al usuario seleccionar una interfaz interactivamente."""
+    interfaces = list_interfaces()
+
+    if not interfaces:
+        print("Error: No se encontraron interfaces")
+        return None
+
+    while True:
+        try:
+            user_input = input("Selecciona una interfaz (por ID o nombre): ").strip()
+
+            # Intentar por ID
+            try:
+                idx = int(user_input) - 1
+                if 0 <= idx < len(interfaces):
+                    return interfaces[idx]
+            except ValueError:
+                pass
+
+            # Intentar por nombre
+            if user_input in interfaces:
+                return user_input
+
+            print(f"Error: '{user_input}' no es válido. Intenta con un ID (1-{len(interfaces)}) o nombre")
+
+        except KeyboardInterrupt:
+            print("\nCancelado")
+            return None
 
 def main():
     global reconstructed_data, packet_count
@@ -114,14 +145,14 @@ def main():
             list_interfaces()
             return
         elif arg == "--help" or arg == "-h":
-            print("Uso: python3 server.py [interfaz]")
+            print("Uso: python3 server.py [opciones] [interfaz]")
             print()
             print("Opciones:")
             print("  --list, -l      Listar interfaces disponibles")
             print("  --help, -h      Mostrar esta ayuda")
             print()
             print("Ejemplos:")
-            print("  python3 server.py              # Auto-detectar loopback")
+            print("  python3 server.py              # Solicitar interfaz interactivamente")
             print("  python3 server.py lo           # Usar interfaz 'lo'")
             print("  python3 server.py eth0         # Usar interfaz 'eth0'")
             print("  python3 server.py --list       # Listar interfaces")
@@ -135,11 +166,10 @@ def main():
         if selected_iface:
             print(f"Interfaz detectada automáticamente: {selected_iface}")
         else:
-            print("No se detectó interfaz loopback. Mostrando interfaces disponibles:\n")
-            list_interfaces()
-            print("\nUso: python3 server.py <nombre_interfaz>")
-            print("Ejemplo: python3 server.py lo")
-            return
+            print("No se detectó interfaz loopback automáticamente.\n")
+            selected_iface = select_interface_interactive()
+            if not selected_iface:
+                return
 
     try:
         print(f"Escuchando en interfaz: {selected_iface}\n")
