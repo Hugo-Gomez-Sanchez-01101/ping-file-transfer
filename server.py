@@ -6,15 +6,16 @@ y reconstruye el archivo localmente.
 
 import sys
 import os
+import platform
 
 try:
-    from scapy.all import sniff, IP, ICMP
+    from scapy.all import sniff, IP, ICMP, get_if_list
     SCAPY_AVAILABLE = True
 except ImportError:
     SCAPY_AVAILABLE = False
     print("Instalando scapy...")
     os.system('pip3 install scapy')
-    from scapy.all import sniff, IP, ICMP
+    from scapy.all import sniff, IP, ICMP, get_if_list
 
 reconstructed_data = bytearray()
 packet_count = 0
@@ -44,18 +45,57 @@ def packet_callback(packet):
                     print("\n✓ Fin de transmisión detectado")
                     raise KeyboardInterrupt
 
+def get_loopback_interface():
+    """Detectar la interfaz loopback según el SO."""
+    system = platform.system()
+    interfaces = get_if_list()
+
+    if system == "Windows":
+        # En Windows, buscar interfaz loopback
+        loopback_names = ['lo', 'Loopback', 'lo0']
+        for name in loopback_names:
+            if name in interfaces:
+                return name
+        # Si no encuentra, usar cualquier interfaz local
+        return None
+    else:  # Linux, macOS
+        if 'lo' in interfaces:
+            return 'lo'
+        elif 'lo0' in interfaces:
+            return 'lo0'
+    return None
+
 def main():
     global reconstructed_data, packet_count
 
-    print("Servidor ICMP esperando paquetes ping...")
-    print("(Requiere permisos de administrador)")
+    system = platform.system()
+    print(f"Servidor ICMP (Sistema: {system})")
+    print("Esperando paquetes ping...")
+    print("(Requiere permisos de administrador/root)")
     print()
 
-    try:
-        # Capturar paquetes ICMP en interfaz loopback
-        print("Escuchando en interfaz loopback (lo)...\n")
-        sniff(prn=packet_callback, filter="icmp", store=False, iface='lo')
+    # Detectar interfaz loopback
+    loopback_iface = get_loopback_interface()
 
+    try:
+        if loopback_iface:
+            print(f"Escuchando en interfaz: {loopback_iface}\n")
+            sniff(prn=packet_callback, filter="icmp", store=False, iface=loopback_iface)
+        else:
+            print("Escuchando en todas las interfaces (icmp)...\n")
+            sniff(prn=packet_callback, filter="icmp", store=False)
+
+    except PermissionError:
+        print("Error: Se requieren permisos de administrador/root")
+        print("En Windows: Ejecutar como Administrador")
+        print("En Linux/macOS: Usar 'sudo python3 server.py'")
+        sys.exit(1)
+    except OSError as e:
+        if "Npcap" in str(e) or "WinPcap" in str(e):
+            print("Error: Npcap no está instalado")
+            print("Descárgalo desde: https://npcap.com/")
+            sys.exit(1)
+        raise
     except KeyboardInterrupt:
         pass
     finally:
@@ -65,6 +105,8 @@ def main():
                 f.write(reconstructed_data)
             print(f"\n✓ Archivo reconstruido: {output_file}")
             print(f"✓ Bytes recibidos: {len(reconstructed_data)}")
+        else:
+            print("\nNo se recibió ningún dato")
 
 if __name__ == '__main__':
     main()

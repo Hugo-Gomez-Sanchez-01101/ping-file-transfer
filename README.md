@@ -21,18 +21,36 @@ git clone <repository-url>
 cd ping-file-transfer
 ```
 
+## Requisitos adicionales
+
+### En Windows
+- Descargar e instalar **Npcap** desde https://npcap.com/
+- Ejecutar PowerShell como Administrador
+
+### En Linux/macOS
+- Ejecutar con `sudo`
+
 ## Uso
 
-### 1. Iniciar el servidor (en una terminal como administrador)
+### 1. Iniciar el servidor
 
+**Linux/macOS:**
 ```bash
+sudo python3 server.py
+```
+
+**Windows (PowerShell como Administrador):**
+```powershell
 python server.py
 ```
 
-El servidor escuchará paquetes ICMP y mostrará progreso:
+El servidor escuchará paquetes ICMP:
 
 ```
-Servidor ICMP esperando paquetes ping...
+Servidor ICMP (Sistema: Linux)
+Esperando paquetes ping...
+Escuchando en interfaz: lo
+
 [Paquete 1] ID: 1234, Seq: 0, Datos: 7f454c46...
 [Paquete 2] ID: 1234, Seq: 1, Datos: 01010100...
 ...
@@ -40,16 +58,22 @@ Servidor ICMP esperando paquetes ping...
 ✓ Bytes recibidos: 5232
 ```
 
-### 2. Enviar archivo (en otra terminal como administrador)
+### 2. Enviar archivo (opción A - Python)
 
+**Linux/macOS:**
 ```bash
+sudo python3 client.py myfile.bin 127.0.0.1
+```
+
+**Windows (PowerShell como Administrador):**
+```powershell
 python client.py myfile.bin 127.0.0.1
 ```
 
-O con IP específica:
+### 2. Enviar archivo (opción B - Shell script, solo Linux/macOS)
 
 ```bash
-python client.py document.pdf 192.168.1.100
+bash client.sh myfile.bin 127.0.0.1
 ```
 
 ## Cómo funciona
