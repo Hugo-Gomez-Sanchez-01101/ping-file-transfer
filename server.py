@@ -7,6 +7,7 @@ y reconstruye el archivo localmente.
 import sys
 import os
 import platform
+import subprocess
 
 try:
     from scapy.all import sniff, IP, ICMP, get_if_list, get_if_addr, conf
@@ -76,15 +77,58 @@ def get_interface_gateway():
         pass
     return "N/A"
 
+def get_windows_friendly_names():
+    """Obtener nombres amigables de interfaces en Windows."""
+    friendly_names = {}
+    try:
+        output = subprocess.check_output('ipconfig', stderr=subprocess.DEVNULL, text=True)
+        current_adapter = None
+
+        for line in output.split('\n'):
+            line = line.strip()
+            if line and not line.startswith('Windows') and ':' in line and not line.startswith('IPv'):
+                # Encontramos un nombre de adaptador
+                if line.startswith('Adaptador') or 'Connection-specific' not in line:
+                    parts = line.split(':', 1)
+                    if len(parts) == 2:
+                        current_adapter = parts[0].replace('Adaptador Ethernet', '').replace('Adaptador de área local', '').strip()
+                        if not current_adapter:
+                            current_adapter = 'Ethernet'
+
+            if current_adapter and 'Dirección IPv4' in line or 'IPv4 Address' in line:
+                ip = line.split(':', 1)[1].strip().split()[0] if ':' in line else None
+                if ip:
+                    friendly_names[ip] = current_adapter
+    except:
+        pass
+
+    return friendly_names
+
+def get_interface_display_name(iface, ip, friendly_names=None):
+    """Obtener nombre amigable de interfaz (especialmente para Windows)."""
+    if friendly_names and ip != "0.0.0.0" and ip != "N/A" and ip in friendly_names:
+        return friendly_names[ip]
+
+    if "Loopback" in str(iface):
+        return "Loopback"
+
+    # Para otros casos, truncar el GUID muy largo
+    iface_str = str(iface)
+    if len(iface_str) > 40:
+        return f"Interfaz {iface_str[-8:]}"
+
+    return iface_str
+
 def list_interfaces():
     """Mostrar todas las interfaces disponibles con IP y gateway."""
     interfaces = get_if_list()
     gateway = get_interface_gateway()
+    friendly_names = get_windows_friendly_names() if platform.system() == "Windows" else {}
 
     print("\n" + "=" * 80)
     print("INTERFACES DISPONIBLES")
     print("=" * 80)
-    print(f"{'ID':<5} {'Nombre':<20} {'IP':<20} {'Gateway':<20}")
+    print(f"{'ID':<5} {'Nombre':<30} {'IP':<18} {'Gateway':<20}")
     print("-" * 80)
 
     for idx, iface in enumerate(interfaces, 1):
@@ -93,7 +137,8 @@ def list_interfaces():
         except:
             ip = "N/A"
 
-        print(f"{idx:<5} {iface:<20} {ip:<20} {gateway:<20}")
+        display_name = get_interface_display_name(iface, ip, friendly_names)
+        print(f"{idx:<5} {display_name:<30} {ip:<18} {gateway:<20}")
 
     print("=" * 80 + "\n")
     return interfaces
