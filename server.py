@@ -222,13 +222,22 @@ def main():
         else:
             selected_iface = arg
 
-    # Detectar interfaz loopback si no se especificó
+    # Si no se especificó interfaz, permitir selección interactiva
     if not selected_iface:
-        selected_iface = get_loopback_interface()
-        if selected_iface:
-            print(f"Interfaz detectada automáticamente: {selected_iface}")
+        # Intentar detectar loopback automáticamente
+        auto_loopback = get_loopback_interface()
+        if auto_loopback:
+            print(f"Interfaz loopback detectada: {auto_loopback}")
+            use_auto = confirm_action("¿Usar interfaz loopback? (s/n): ")
+            if use_auto:
+                selected_iface = auto_loopback
+            else:
+                print("Selecciona otra interfaz:\n")
+                selected_iface = select_interface_interactive()
+                if not selected_iface:
+                    return
         else:
-            print("No se detectó interfaz loopback automáticamente.\n")
+            print("No se detectó interfaz loopback.\n")
             selected_iface = select_interface_interactive()
             if not selected_iface:
                 return
