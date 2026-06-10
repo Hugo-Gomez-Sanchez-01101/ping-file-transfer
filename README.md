@@ -8,17 +8,39 @@ Herramienta para transferir archivos entre máquinas Windows y Linux.
 
 ## Inicio Rápido (TCP)
 
-### Servidor (Windows o Linux)
+### 1️⃣ Verificar Conexión
+
+En Kali:
 ```bash
-python3 server_tcp.py
+bash test_connection.sh 192.168.1.151 9999
 ```
 
-### Cliente (Linux/macOS)
-```bash
-bash client_tcp.sh archivo.txt 192.168.1.151
+### 2️⃣ Iniciar Servidor
+
+En Windows (PowerShell como Administrador):
+```powershell
+python3 .\server_tcp.py
 ```
 
-El archivo se transfiere automáticamente al puerto 9999.
+### 3️⃣ Transferir Archivo
+
+En Kali (nueva terminal):
+```bash
+bash client_tcp.sh archivo.txt 192.168.1.151 9999
+```
+
+### 4️⃣ Verificar Archivo
+
+En Windows: Busca `received_file_*` en la carpeta del servidor
+
+### Test Completo
+
+En Kali (crea y envía archivo de test):
+```bash
+bash test_transfer.sh 192.168.1.151 9999
+```
+
+Luego verifica el checksum en Windows.
 
 ## Características
 
