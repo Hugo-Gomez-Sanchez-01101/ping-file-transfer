@@ -65,6 +65,15 @@ def get_loopback_interface():
             return 'lo0'
     return None
 
+def list_interfaces():
+    """Mostrar todas las interfaces disponibles."""
+    interfaces = get_if_list()
+    print("Interfaces disponibles:")
+    print("-" * 50)
+    for iface in interfaces:
+        print(f"  • {iface}")
+    print("-" * 50)
+
 def main():
     global reconstructed_data, packet_count
 
@@ -74,16 +83,44 @@ def main():
     print("(Requiere permisos de administrador/root)")
     print()
 
-    # Detectar interfaz loopback
-    loopback_iface = get_loopback_interface()
+    # Argumentos de línea de comandos
+    selected_iface = None
+    if len(sys.argv) > 1:
+        arg = sys.argv[1]
+        if arg == "--list" or arg == "-l":
+            list_interfaces()
+            return
+        elif arg == "--help" or arg == "-h":
+            print("Uso: python3 server.py [interfaz]")
+            print()
+            print("Opciones:")
+            print("  --list, -l      Listar interfaces disponibles")
+            print("  --help, -h      Mostrar esta ayuda")
+            print()
+            print("Ejemplos:")
+            print("  python3 server.py              # Auto-detectar loopback")
+            print("  python3 server.py lo           # Usar interfaz 'lo'")
+            print("  python3 server.py eth0         # Usar interfaz 'eth0'")
+            print("  python3 server.py --list       # Listar interfaces")
+            return
+        else:
+            selected_iface = arg
+
+    # Detectar interfaz loopback si no se especificó
+    if not selected_iface:
+        selected_iface = get_loopback_interface()
+        if selected_iface:
+            print(f"Interfaz detectada automáticamente: {selected_iface}")
+        else:
+            print("No se detectó interfaz loopback. Mostrando interfaces disponibles:\n")
+            list_interfaces()
+            print("\nUso: python3 server.py <nombre_interfaz>")
+            print("Ejemplo: python3 server.py lo")
+            return
 
     try:
-        if loopback_iface:
-            print(f"Escuchando en interfaz: {loopback_iface}\n")
-            sniff(prn=packet_callback, filter="icmp", store=False, iface=loopback_iface)
-        else:
-            print("Escuchando en todas las interfaces (icmp)...\n")
-            sniff(prn=packet_callback, filter="icmp", store=False)
+        print(f"Escuchando en interfaz: {selected_iface}\n")
+        sniff(prn=packet_callback, filter="icmp", store=False, iface=selected_iface)
 
     except PermissionError:
         print("Error: Se requieren permisos de administrador/root")

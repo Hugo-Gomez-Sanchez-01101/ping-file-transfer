@@ -32,7 +32,32 @@ cd ping-file-transfer
 
 ## Uso
 
-### 1. Iniciar el servidor
+### 1. Listar interfaces disponibles
+
+**Linux/macOS:**
+```bash
+sudo python3 server.py --list
+```
+
+**Windows (PowerShell como Administrador):**
+```powershell
+python server.py --list
+```
+
+Output:
+```
+Interfaces disponibles:
+--------------------------------------------------
+  • lo
+  • eth0
+  • wlan0
+  • docker0
+--------------------------------------------------
+```
+
+### 2. Iniciar el servidor
+
+#### Opción A: Auto-detectar loopback
 
 **Linux/macOS:**
 ```bash
@@ -42,6 +67,22 @@ sudo python3 server.py
 **Windows (PowerShell como Administrador):**
 ```powershell
 python server.py
+```
+
+#### Opción B: Especificar interfaz
+
+**Linux/macOS:**
+```bash
+sudo python3 server.py lo
+# O cualquier otra interfaz:
+sudo python3 server.py eth0
+```
+
+**Windows (PowerShell como Administrador):**
+```powershell
+python server.py Loopback
+# O cualquier otra interfaz:
+python server.py eth0
 ```
 
 El servidor escuchará paquetes ICMP:
@@ -58,7 +99,7 @@ Escuchando en interfaz: lo
 ✓ Bytes recibidos: 5232
 ```
 
-### 2. Enviar archivo (opción A - Python)
+### 3. Enviar archivo (opción A - Python)
 
 **Linux/macOS:**
 ```bash
@@ -70,7 +111,7 @@ sudo python3 client.py myfile.bin 127.0.0.1
 python client.py myfile.bin 127.0.0.1
 ```
 
-### 2. Enviar archivo (opción B - Shell script, solo Linux/macOS)
+### 3. Enviar archivo (opción B - Shell script, solo Linux/macOS)
 
 ```bash
 bash client.sh myfile.bin 127.0.0.1
@@ -93,14 +134,33 @@ bash client.sh myfile.bin 127.0.0.1
    - Presionar Ctrl+C en el servidor para detener y guardar
    - El cliente envía un paquete final con sequence = 0xFFFF como marcador
 
-## Ejemplo
+## Opciones del servidor
+
+```
+Uso: python3 server.py [interfaz]
+
+Opciones:
+  --list, -l      Listar interfaces disponibles
+  --help, -h      Mostrar esta ayuda
+
+Ejemplos:
+  python3 server.py              # Auto-detectar loopback
+  python3 server.py lo           # Usar interfaz 'lo'
+  python3 server.py eth0         # Usar interfaz 'eth0'
+  python3 server.py --list       # Listar interfaces
+```
+
+## Ejemplo completo
 
 ```bash
-# Terminal 1 - Servidor
-python server.py
+# Terminal 1 - Listar interfaces
+sudo python3 server.py --list
 
-# Terminal 2 - Cliente
-python client.py photo.jpg 127.0.0.1
+# Terminal 1 - Iniciar servidor en loopback
+sudo python3 server.py lo
+
+# Terminal 2 - Enviar archivo
+sudo python3 client.py photo.jpg 127.0.0.1
 ```
 
 Resultado: `received_file` contendrá los datos de `photo.jpg`
