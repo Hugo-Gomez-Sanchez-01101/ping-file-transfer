@@ -2,38 +2,23 @@
 """
 Cliente que envía un archivo a través de paquetes ICMP (ping).
 Compatible con Windows, Linux y macOS.
+Usa scapy para mejor compatibilidad con Npcap en Windows.
 """
 
-import socket
-import struct
 import sys
 import os
 import time
 import platform
 
-def create_icmp_packet(id_, sequence, payload):
-    """Crear paquete ICMP echo request con payload."""
-    checksum = 0
-    header = struct.pack('!BBHHH', 8, 0, checksum, id_, sequence)
-
-    # Calcular checksum
-    packet = header + payload
-    if len(packet) % 2:
-        packet += b'\0'
-
-    sum_ = 0
-    for i in range(0, len(packet), 2):
-        sum_ += (packet[i] << 8) + packet[i + 1]
-
-    sum_ = (sum_ >> 16) + (sum_ & 0xffff)
-    sum_ += sum_ >> 16
-    checksum = (~sum_) & 0xffff
-
-    header = struct.pack('!BBHHH', 8, 0, checksum, id_, sequence)
-    return header + payload
+try:
+    from scapy.all import IP, ICMP, send, conf
+except ImportError:
+    print("Instalando scapy...")
+    os.system('pip3 install scapy')
+    from scapy.all import IP, ICMP, send, conf
 
 def send_file(filename, target='127.0.0.1', chunk_size=4):
-    """Enviar archivo vía paquetes ICMP."""
+    """Enviar archivo vía paquetes ICMP usando scapy."""
 
     if not os.path.exists(filename):
         print(f"Error: Archivo '{filename}' no existe")
@@ -59,25 +44,25 @@ def send_file(filename, target='127.0.0.1', chunk_size=4):
     print(f"Total de paquetes: {len(chunks)}\n")
 
     try:
-        if system == "Windows":
-            sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_ICMP)
-            sock.bind((socket.gethostbyname(socket.gethostname()), 0))
-            sock.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
-        else:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_ICMP)
-
         packet_id = os.getpid() & 0xffff
         sequence = 0
+
+        # En Windows, deshabilitar output de Scapy
+        if system == "Windows":
+            conf.verb = 0
 
         for idx, chunk in enumerate(chunks, 1):
             try:
                 payload = bytes.fromhex(chunk)
-                packet = create_icmp_packet(packet_id, sequence, payload)
 
-                if system == "Windows":
-                    sock.sendto(packet, (target, 1))
-                else:
-                    sock.sendto(packet, (target, 0))
+                # Crear paquete ICMP con scapy
+                ip_layer = IP(dst=target)
+                icmp_layer = ICMP(type=8, id=packet_id, seq=sequence) / payload
+
+                packet = ip_layer / icmp_layer
+
+                # Enviar paquete
+                send(packet, verbose=False)
 
                 print(f"[{idx}/{len(chunks)}] Seq: {sequence}, Datos: {chunk[:16]}...")
                 sequence += 1
@@ -89,10 +74,11 @@ def send_file(filename, target='127.0.0.1', chunk_size=4):
 
         # Paquete de fin
         print("\nEnviando marcador de fin...")
-        final_packet = create_icmp_packet(packet_id, 0xFFFF, b'END')
-        sock.sendto(final_packet, (target, 1 if system == "Windows" else 0))
+        ip_layer = IP(dst=target)
+        icmp_layer = ICMP(type=8, id=packet_id, seq=0xFFFF) / b'END'
+        packet = ip_layer / icmp_layer
+        send(packet, verbose=False)
 
-        sock.close()
         print("✓ Transmisión completada")
 
     except PermissionError:
@@ -104,6 +90,8 @@ def send_file(filename, target='127.0.0.1', chunk_size=4):
         sys.exit(1)
     except Exception as e:
         print(f"Error: {e}")
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
 
 if __name__ == '__main__':
