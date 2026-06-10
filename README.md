@@ -1,276 +1,144 @@
-# File Transfer Tool
+# TCP File Transfer Tool
 
-Herramienta para transferir archivos entre máquinas Windows y Linux.
+Herramienta simple y confiable para transferir archivos entre máquinas Windows y Linux usando TCP.
 
-**Versiones disponibles:**
-- **TCP** (Recomendado): Funciona perfectamente en Windows y Linux. Cliente shell puro.
-- **ICMP/Ping** (Legacy): Cliente Python, requiere scapy.
+## Características
 
-## Inicio Rápido (TCP)
+- **Cliente bash puro** - Sin dependencias Python
+- **Servidor Python** - Compatible con Windows y Linux
+- **Envío de nombre de archivo** - Los archivos se reciben con su nombre original
+- **Múltiples métodos** - /dev/tcp, netcat, telnet, socat
+- **Bidireccional** - Funciona de Windows a Linux y Linux a Linux
 
-### 1️⃣ Verificar Conexión
+## Requisitos
 
-En Kali:
+### Servidor
+- Python 3.6+
+- Permisos de administrador/root
+
+### Cliente
+- bash (no sh)
+- Una de estas herramientas:
+  - `/dev/tcp` (bash built-in - Linux/macOS)
+  - `nc` (netcat)
+  - `telnet`
+  - `socat`
+
+## Instalación rápida
+
 ```bash
-bash test_connection.sh 192.168.1.151 9999
+# Instalar netcat si no tienes /dev/tcp
+sudo apt-get install netcat-openbsd   # Debian/Ubuntu
+sudo yum install nmap-ncat             # RHEL/CentOS
+brew install netcat                    # macOS
 ```
 
-### 2️⃣ Iniciar Servidor
+## Uso
 
-En Windows (PowerShell como Administrador):
+### 1. Iniciar servidor
+
+**Windows (PowerShell como Administrador):**
 ```powershell
 python3 .\server_tcp.py
 ```
 
-### 3️⃣ Transferir Archivo
+**Linux/macOS:**
+```bash
+sudo python3 server_tcp.py
+```
 
-En Kali (nueva terminal):
+### 2. Enviar archivo
+
+**Desde otra máquina:**
 ```bash
 bash client_tcp.sh archivo.txt 192.168.1.151 9999
 ```
 
-### 4️⃣ Verificar Archivo
+**Parámetros:**
+- `archivo.txt` - Archivo a enviar
+- `192.168.1.151` - IP del servidor
+- `9999` - Puerto (opcional, por defecto 9999)
 
-En Windows: Busca `received_file_*` en la carpeta del servidor
+### 3. Verificar archivo
 
-### Test Completo
+El servidor guardará el archivo con su **nombre original** automáticamente.
 
-En Kali (crea y envía archivo de test):
+## Ejemplos
+
+### Windows → Linux
 ```bash
-bash test_transfer.sh 192.168.1.151 9999
+# En Linux (servidor)
+sudo python3 server_tcp.py
+
+# En Windows (cliente) - WSL o Git Bash
+bash client_tcp.sh documento.pdf 192.168.1.100 9999
 ```
 
-Luego verifica el checksum en Windows.
-
-## Características
-
-**Versión TCP (Recomendada):**
-- Cliente bash puro (sin dependencias)
-- Servidor Python multiplataforma
-- Funciona entre Windows ↔ Linux
-- Simple y confiable
-
-**Versión ICMP (Legacy):**
-- Cliente Python o shell script
-- Usa paquetes ICMP (ping)
-- Requiere scapy en el cliente
-- Chunks configurables
-
-## Requisitos
-
-- Python 3.6+
-- Permisos de administrador (para acceso a raw sockets ICMP)
-
-## Instalación
-
+### Linux → Linux
 ```bash
-git clone <repository-url>
-cd ping-file-transfer
+# Servidor
+sudo python3 server_tcp.py
+
+# Cliente
+bash client_tcp.sh photo.jpg 192.168.1.50 9999
 ```
 
-## Requisitos adicionales
-
-### En Windows
-- Descargar e instalar **Npcap** desde https://npcap.com/
-- Ejecutar PowerShell como Administrador
-
-### En Linux/macOS
-- Ejecutar con `sudo`
-
-## Uso
-
-### 1. Listar interfaces disponibles
-
-**Linux/macOS:**
-```bash
-sudo python3 server.py --list
-```
-
-**Windows (PowerShell como Administrador):**
+### Windows → Windows
 ```powershell
-python server.py --list
+# Servidor (PowerShell Admin)
+python3 .\server_tcp.py
 ```
-
-Output:
-```
-================================================================================
-INTERFACES DISPONIBLES
-================================================================================
-ID    Nombre               IP                   Gateway             
---------------------------------------------------------------------------------
-1     lo                   127.0.0.1            192.168.1.1         
-2     eth0                 192.168.1.100        192.168.1.1         
-3     wlan0                192.168.1.105        192.168.1.1         
-4     docker0              172.17.0.1           N/A                 
-================================================================================
-```
-
-### 2. Iniciar el servidor
-
-#### Opción A: Seleccionar interfaz interactivamente
-
-**Linux/macOS:**
-```bash
-sudo python3 server.py
-```
-
-**Windows (PowerShell como Administrador):**
-```powershell
-python server.py
-```
-
-Salida:
-```
-================================================================================
-INTERFACES DISPONIBLES
-================================================================================
-ID    Nombre               IP                   Gateway             
---------------------------------------------------------------------------------
-1     lo                   127.0.0.1            192.168.1.1         
-2     eth0                 192.168.1.100        192.168.1.1         
-3     wlan0                192.168.1.105        192.168.1.1         
-================================================================================
-
-Selecciona una interfaz (por ID o nombre): 1
-```
-
-Puedes seleccionar por **ID** (1, 2, 3...) o por **nombre** (lo, eth0, wlan0...)
-
-#### Opción B: Auto-detectar loopback
-
-Si existe una interfaz loopback (lo/lo0), se detectará automáticamente.
-
-#### Opción C: Especificar interfaz directamente
-
-**Linux/macOS:**
-```bash
-sudo python3 server.py lo
-# O cualquier otra interfaz:
-sudo python3 server.py eth0
-```
-
-**Windows (PowerShell como Administrador):**
-```powershell
-python server.py Loopback
-# O cualquier otra interfaz:
-python server.py eth0
-```
-
-El servidor escuchará paquetes ICMP:
-
-```
-Servidor ICMP (Sistema: Linux)
-Esperando paquetes ping...
-Escuchando en interfaz: lo
-
-[Paquete 1] ID: 1234, Seq: 0, Datos: 7f454c46...
-[Paquete 2] ID: 1234, Seq: 1, Datos: 01010100...
-...
-✓ Archivo reconstruido: received_file
-✓ Bytes recibidos: 5232
-```
-
-### 3. Enviar archivo (opción A - Python)
-
-**Linux/macOS:**
-```bash
-sudo python3 client.py myfile.bin 127.0.0.1
-```
-
-**Windows (PowerShell como Administrador):**
-```powershell
-python client.py myfile.bin 127.0.0.1
-```
-
-### 3. Enviar archivo (opción B - Shell script, solo Linux/macOS)
 
 ```bash
-bash client.sh myfile.bin 127.0.0.1
+# Cliente (otro Windows - WSL/Git Bash)
+bash client_tcp.sh archivo.exe 192.168.1.151 9999
 ```
 
 ## Cómo funciona
 
-1. **Cliente**: 
-   - Lee el archivo en binario
-   - Convierte a hexadecimal
-   - Divide en chunks de 4 bytes (8 caracteres hex)
-   - Envía cada chunk como payload en un paquete ICMP echo request
+1. **Cliente** se conecta al servidor TCP
+2. **Cliente** envía:
+   - Longitud del nombre de archivo (1 byte)
+   - Nombre del archivo
+   - Contenido del archivo
+3. **Servidor** recibe y guarda con nombre original
 
-2. **Servidor**:
-   - Captura paquetes ICMP entrantes
-   - Extrae el payload de cada paquete
-   - Reconstruye el archivo original
+## Métodos de conexión (automáticos)
 
-3. **Finalización**:
-   - Presionar Ctrl+C en el servidor para detener y guardar
-   - El cliente envía un paquete final con sequence = 0xFFFF como marcador
+El cliente intenta en orden:
+1. `/dev/tcp` (bash built-in, rápido, Linux/macOS)
+2. `nc` (netcat, multiplataforma)
+3. `telnet` (disponible en la mayoría de sistemas)
+4. `socat` (robusto, si está instalado)
 
-## Opciones del servidor
+## Troubleshooting
 
-```
-Uso: python3 server.py [opciones] [interfaz]
-
-Opciones:
-  --list, -l      Listar interfaces disponibles
-  --help, -h      Mostrar esta ayuda
-
-Ejemplos:
-  python3 server.py              # Seleccionar interfaz interactivamente
-  python3 server.py lo           # Usar interfaz 'lo'
-  python3 server.py 1            # Usar ID de interfaz (si --list muestra ID)
-  python3 server.py eth0         # Usar interfaz 'eth0'
-  python3 server.py --list       # Listar interfaces con ID
-  python3 server.py --help       # Mostrar ayuda
-```
-
-## Ejemplos
-
-### TCP (Recomendado)
-
-**Windows:**
-```powershell
-# Terminal 1 - Servidor
-python3 server_tcp.py
-
-# Terminal 2 (en otra máquina con Linux)
-bash client_tcp.sh myfile.txt 192.168.1.151
-```
-
-**Linux:**
+**"Error: El puerto está en uso"**
 ```bash
-# Terminal 1 - Servidor
-python3 server_tcp.py
+# Linux: cambiar puerto
+sudo python3 server_tcp.py 9999  # usar otro puerto
 
-# Terminal 2 (en otra máquina)
-bash client_tcp.sh myfile.txt 192.168.1.100
+# Windows: ejecutar como Administrador
 ```
 
-Resultado: `received_file_*` contendrá los datos del archivo.
-
-### ICMP/Ping (Legacy)
-
+**"No se pudo usar ningún método"**
 ```bash
-# Terminal 1 - Servidor
-sudo python3 server.py lo
-
-# Terminal 2 - Cliente (con scapy)
-sudo python3 client.py photo.jpg 127.0.0.1
-
-# O con shell script (solo Linux)
-bash client.sh photo.jpg 127.0.0.1
+# Instalar netcat (más compatible)
+sudo apt-get install netcat-openbsd
 ```
 
-## Notas de seguridad
-
-- Este proyecto es educativo/experimental
-- Requiere acceso a raw sockets (administrador)
-- En redes reales, los firewalls pueden bloquear paquetes ICMP anómalos
-- No usar para transferencias sensibles sin encriptación adicional
+**"Archivo no aparece en servidor"**
+- Verificar que el servidor está ejecutándose
+- Verificar firewall permite puerto 9999
+- En Windows: desactivar Windows Defender Firewall (para tests)
 
 ## Licencia
 
 MIT
 
-## Autor
+## Notas
 
-Created as a proof-of-concept for data exfiltration via ICMP
+- Usa TCP, no ICMP/ping - mucho más confiable
+- Funciona a través de redes e internet
+- No tiene límite de tamaño de archivo
+- Comparte conexión: múltiples archivos sequencialmente

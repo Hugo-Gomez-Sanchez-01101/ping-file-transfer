@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Servidor TCP que recibe archivos en chunks y los reconstruye localmente.
+Servidor TCP que recibe archivos con nombre y los reconstruye localmente.
 Compatible con Windows y Linux.
 """
 
@@ -26,10 +26,8 @@ def confirm_action(message="¿Estás seguro? (s/n): "):
 
 def main():
     port = 9999
-    reconstructed_data = bytearray()
-    packet_count = 0
-
     system = platform.system()
+
     print("=" * 50)
     print("SERVIDOR TCP - Transferencia de Archivos")
     print("=" * 50)
@@ -38,7 +36,6 @@ def main():
     print("")
 
     try:
-        # Crear socket TCP
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
@@ -69,24 +66,37 @@ def main():
                 client_socket, client_address = server_socket.accept()
                 print(f"✓ Cliente conectado desde {client_address[0]}:{client_address[1]}\n")
 
+                # Recibir nombre del archivo (longitud + nombre)
+                name_len_byte = client_socket.recv(1)
+                if not name_len_byte:
+                    print("Error: No se recibió longitud del nombre")
+                    client_socket.close()
+                    continue
+
+                name_len = ord(name_len_byte)
+                filename = client_socket.recv(name_len).decode('utf-8', errors='ignore')
+
+                if not filename:
+                    filename = "received_file"
+
+                print(f"Nombre de archivo: {filename}")
+
+                # Recibir datos del archivo
                 reconstructed_data = bytearray()
                 packet_count = 0
 
                 while True:
                     try:
-                        # Recibir datos
-                        data = client_socket.recv(1024)
+                        data = client_socket.recv(4096)
 
                         if not data:
-                            # Conexión cerrada
                             print("Conexión cerrada por el cliente")
                             break
 
                         packet_count += 1
                         reconstructed_data.extend(data)
 
-                        hex_str = data.hex()
-                        print(f"[Paquete {packet_count}] Bytes: {len(data)}, Datos: {hex_str[:32]}...")
+                        print(f"[Paquete {packet_count}] Bytes: {len(data)}")
 
                     except KeyboardInterrupt:
                         raise
@@ -97,9 +107,9 @@ def main():
                 client_socket.close()
                 print("")
 
-                # Guardar archivo si se recibió data
+                # Guardar archivo
                 if reconstructed_data:
-                    output_file = f'received_file_{len(reconstructed_data)}bytes'
+                    output_file = filename
                     try:
                         with open(output_file, 'wb') as f:
                             f.write(reconstructed_data)
@@ -121,7 +131,6 @@ def main():
             server_socket.close()
         else:
             print("Continuando...\n")
-            # Reintentar
             main()
 
 if __name__ == '__main__':
