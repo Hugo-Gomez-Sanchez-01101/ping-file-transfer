@@ -1,13 +1,38 @@
-# Ping File Transfer
+# File Transfer Tool
 
-Herramienta que permite transferir archivos a través de paquetes ICMP (ping). Los datos se incrustan en el payload de los paquetes ping y se reconstruyen en el servidor.
+Herramienta para transferir archivos entre máquinas Windows y Linux.
+
+**Versiones disponibles:**
+- **TCP** (Recomendado): Funciona perfectamente en Windows y Linux. Cliente shell puro.
+- **ICMP/Ping** (Legacy): Cliente Python, requiere scapy.
+
+## Inicio Rápido (TCP)
+
+### Servidor (Windows o Linux)
+```bash
+python3 server_tcp.py
+```
+
+### Cliente (Linux/macOS)
+```bash
+bash client_tcp.sh archivo.txt 192.168.1.151
+```
+
+El archivo se transfiere automáticamente al puerto 9999.
 
 ## Características
 
-- **Cliente Python**: Lee un archivo y lo envía en chunks a través de paquetes ICMP echo
-- **Servidor Python**: Captura paquetes ICMP y reconstruye el archivo original
-- Compatible con Windows, Linux y macOS
-- Chunks configurables (por defecto 4 bytes)
+**Versión TCP (Recomendada):**
+- Cliente bash puro (sin dependencias)
+- Servidor Python multiplataforma
+- Funciona entre Windows ↔ Linux
+- Simple y confiable
+
+**Versión ICMP (Legacy):**
+- Cliente Python o shell script
+- Usa paquetes ICMP (ping)
+- Requiere scapy en el cliente
+- Chunks configurables
 
 ## Requisitos
 
@@ -176,20 +201,42 @@ Ejemplos:
   python3 server.py --help       # Mostrar ayuda
 ```
 
-## Ejemplo completo
+## Ejemplos
 
-```bash
-# Terminal 1 - Listar interfaces
-sudo python3 server.py --list
+### TCP (Recomendado)
 
-# Terminal 1 - Iniciar servidor en loopback
-sudo python3 server.py lo
+**Windows:**
+```powershell
+# Terminal 1 - Servidor
+python3 server_tcp.py
 
-# Terminal 2 - Enviar archivo
-sudo python3 client.py photo.jpg 127.0.0.1
+# Terminal 2 (en otra máquina con Linux)
+bash client_tcp.sh myfile.txt 192.168.1.151
 ```
 
-Resultado: `received_file` contendrá los datos de `photo.jpg`
+**Linux:**
+```bash
+# Terminal 1 - Servidor
+python3 server_tcp.py
+
+# Terminal 2 (en otra máquina)
+bash client_tcp.sh myfile.txt 192.168.1.100
+```
+
+Resultado: `received_file_*` contendrá los datos del archivo.
+
+### ICMP/Ping (Legacy)
+
+```bash
+# Terminal 1 - Servidor
+sudo python3 server.py lo
+
+# Terminal 2 - Cliente (con scapy)
+sudo python3 client.py photo.jpg 127.0.0.1
+
+# O con shell script (solo Linux)
+bash client.sh photo.jpg 127.0.0.1
+```
 
 ## Notas de seguridad
 
