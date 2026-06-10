@@ -32,16 +32,41 @@ def format_ipv4_packet(version_header_length, ttl, proto, src, target, data):
 def recv_icmp(sock):
     raw_buffer = sock.recvfrom(65535)
     raw_packet = raw_buffer[0]
-    packet_dict = {}
 
-    ipv4_packet = raw_packet[:20]
+    # En Linux con AF_PACKET, los primeros 14 bytes son la cabecera Ethernet
+    # En Linux con AF_INET, los primeros 20 bytes son la cabecera IPv4
+    # En Windows, depende de la configuración
+
+    # Intentar detectar el offset basado en la longitud y contenido
+    offset = 0
+    if len(raw_packet) > 20 and raw_packet[0] & 0xf0 != 0x40:
+        # Probablemente es una cabecera Ethernet (AF_PACKET en Linux)
+        offset = 14
+    elif len(raw_packet) > 20:
+        # IPv4 directo
+        offset = 20
+
+    if offset + 8 > len(raw_packet):
+        return None, 0, 0
+
+    # Saltar cabecera IPv4 o Ethernet+IPv4
+    ipv4_packet = raw_packet[offset:offset+20] if offset == 14 else raw_packet[offset-20:offset]
+
+    if len(ipv4_packet) < 20:
+        return None, 0, 0
+
     version_header_length, ttl, proto, src, target = struct.unpack('! B B 2x 4s 4s', ipv4_packet)
 
-    icmp_packet = raw_packet[20:28]
+    icmp_start = offset + 20 if offset == 14 else 20
+    icmp_packet = raw_packet[icmp_start:icmp_start+8]
+
+    if len(icmp_packet) < 8:
+        return None, 0, 0
+
     checksum, id_, sequence = format_icmp(icmp_packet)
 
     # El payload está después de la cabecera ICMP (8 bytes)
-    payload = raw_packet[28:]
+    payload = raw_packet[icmp_start+8:]
 
     return payload, id_, sequence
 
@@ -62,7 +87,11 @@ def main():
         packet_count = 0
 
         while True:
-            payload, id_, sequence = recv_icmp(sock)
+            result = recv_icmp(sock)
+            if result[0] is None:
+                continue
+
+            payload, id_, sequence = result
 
             if payload:
                 packet_count += 1
