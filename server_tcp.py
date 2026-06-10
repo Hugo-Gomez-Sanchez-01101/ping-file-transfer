@@ -30,18 +30,37 @@ def main():
     packet_count = 0
 
     system = platform.system()
-    print(f"Servidor TCP (Sistema: {system})")
+    print("=" * 50)
+    print("SERVIDOR TCP - Transferencia de Archivos")
+    print("=" * 50)
+    print(f"Sistema: {system}")
     print(f"Puerto: {port}")
-    print("Esperando conexiones...\n")
+    print("")
 
     try:
         # Crear socket TCP
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        server_socket.bind(('0.0.0.0', port))
+
+        try:
+            server_socket.bind(('0.0.0.0', port))
+        except OSError as e:
+            print(f"Error al vincular puerto {port}: {e}")
+            print("")
+            print("Soluciones:")
+            print("  1. El puerto está en uso - Usa otro puerto")
+            print("  2. En Windows: Abre PowerShell como Administrador")
+            print("  3. En Linux: Usa 'sudo python3 server_tcp.py'")
+            sys.exit(1)
+
         server_socket.listen(1)
 
-        print(f"Escuchando en 0.0.0.0:{port}")
+        print(f"✓ Escuchando en 0.0.0.0:{port}")
+        print("✓ Esperando conexiones...")
+        print("")
+        print("Para enviar archivo:")
+        print(f"  bash client_tcp.sh <archivo> <tu_ip> {port}")
+        print("")
         print("Presiona Ctrl+C para detener\n")
 
         while True:
@@ -76,14 +95,21 @@ def main():
                         break
 
                 client_socket.close()
+                print("")
 
                 # Guardar archivo si se recibió data
                 if reconstructed_data:
-                    output_file = f'received_file_{packet_count}bytes'
-                    with open(output_file, 'wb') as f:
-                        f.write(reconstructed_data)
-                    print(f"✓ Archivo guardado: {output_file}")
-                    print(f"✓ Bytes recibidos: {len(reconstructed_data)}\n")
+                    output_file = f'received_file_{len(reconstructed_data)}bytes'
+                    try:
+                        with open(output_file, 'wb') as f:
+                            f.write(reconstructed_data)
+                        print(f"✓ Archivo guardado: {output_file}")
+                        print(f"✓ Tamaño total: {len(reconstructed_data)} bytes")
+                        print(f"✓ Paquetes recibidos: {packet_count}\n")
+                    except Exception as e:
+                        print(f"✗ Error al guardar archivo: {e}\n")
+                else:
+                    print("⚠️  No se recibió ningún dato\n")
 
             except KeyboardInterrupt:
                 raise

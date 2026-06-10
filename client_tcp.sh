@@ -1,12 +1,16 @@
 #!/bin/bash
 #
-# Cliente TCP puro (bash/sh) que envía archivos
-# Sin dependencias - usa solo herramientas estándar
+# Cliente TCP (bash) que envía archivos
+# Sin dependencias Python - usa solo bash built-in
 #
 
 if [ $# -lt 2 ]; then
     echo "Uso: $0 <archivo> <host> [puerto]"
     echo "Ejemplo: $0 myfile.txt 192.168.1.151 9999"
+    echo ""
+    echo "Requisitos:"
+    echo "  - bash (no sh)"
+    echo "  - ping (para verificar conectividad)"
     exit 1
 fi
 
@@ -14,37 +18,61 @@ FILE="$1"
 HOST="$2"
 PORT="${3:-9999}"
 
+# Verificar que es bash
+if [ -z "$BASH_VERSION" ]; then
+    echo "Error: Este script requiere bash, no sh"
+    echo "Ejecuta: bash $0 ..."
+    exit 1
+fi
+
 if [ ! -f "$FILE" ]; then
     echo "Error: El archivo '$FILE' no existe"
     exit 1
 fi
 
-FILE_SIZE=$(stat -f%z "$FILE" 2>/dev/null || stat -c%s "$FILE" 2>/dev/null || wc -c < "$FILE")
+# Obtener tamaño del archivo (portable)
+FILE_SIZE=$(wc -c < "$FILE")
 
-echo "Archivo: $FILE"
-echo "Tamaño: $FILE_SIZE bytes"
-echo "Destino: $HOST:$PORT"
+echo "=========================================="
+echo "Cliente TCP - Transferencia de Archivos"
+echo "=========================================="
+echo "Archivo:  $FILE"
+echo "Tamaño:   $FILE_SIZE bytes"
+echo "Destino:  $HOST:$PORT"
 echo ""
 
-# Verificar conectividad
+# Verificar conectividad ping
 echo "Verificando conectividad..."
-if ! timeout 2 bash -c "cat < /dev/null > /dev/tcp/$HOST/$PORT" 2>/dev/null; then
+if ! ping -c 1 -W 2 "$HOST" > /dev/null 2>&1; then
+    echo "⚠️  Advertencia: Host no responde a ping"
+    echo "Continuando de todas formas..."
+fi
+
+# Verificar conexión TCP
+echo "Probando conexión TCP..."
+if timeout 2 bash -c "cat < /dev/null > /dev/tcp/$HOST/$PORT" 2>/dev/null; then
+    echo "✓ Conexión TCP exitosa"
+else
     echo "Error: No se puede conectar a $HOST:$PORT"
+    echo ""
+    echo "Soluciones:"
+    echo "  1. Verificar que el servidor está ejecutándose"
+    echo "  2. Verificar firewall en $HOST"
+    echo "  3. Verificar IP y puerto: $HOST:$PORT"
     exit 1
 fi
 
-echo "✓ Conectado a $HOST:$PORT"
 echo ""
-
-# Enviar archivo
 echo "Enviando archivo..."
 
-# Usar cat para enviar el archivo por TCP
-(cat "$FILE"; sleep 0.1) | timeout 30 bash -c "cat > /dev/tcp/$HOST/$PORT" 2>/dev/null
-
-if [ $? -eq 0 ]; then
+# Enviar archivo por TCP
+if cat "$FILE" | timeout 30 bash -c "cat > /dev/tcp/$HOST/$PORT" 2>/dev/null; then
+    echo "✓ Archivo enviado exitosamente"
     echo "✓ Transmisión completada"
+    echo ""
+    echo "El archivo debe estar en el servidor como 'received_file_*'"
+    exit 0
 else
-    echo "Error durante la transmisión"
+    echo "✗ Error durante la transmisión"
     exit 1
 fi
