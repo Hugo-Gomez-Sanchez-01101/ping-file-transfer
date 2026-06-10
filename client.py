@@ -17,6 +17,21 @@ except ImportError:
     os.system('pip3 install scapy')
     from scapy.all import IP, ICMP, send, conf
 
+def confirm_action(message="¿Estás seguro? (s/n): "):
+    """Pedir confirmación al usuario."""
+    while True:
+        try:
+            response = input(message).strip().lower()
+            if response in ['s', 'si', 'yes', 'y']:
+                return True
+            elif response in ['n', 'no']:
+                return False
+            else:
+                print("Por favor, responde 's' o 'n'")
+        except KeyboardInterrupt:
+            print()
+            return False
+
 def send_file(filename, target='127.0.0.1', chunk_size=4):
     """Enviar archivo vía paquetes ICMP usando scapy."""
 
@@ -42,6 +57,7 @@ def send_file(filename, target='127.0.0.1', chunk_size=4):
     chunks = [hex_data[i:i+chunk_size*2] for i in range(0, len(hex_data), chunk_size*2)]
 
     print(f"Total de paquetes: {len(chunks)}\n")
+    print("Presiona Ctrl+C para cancelar\n")
 
     try:
         packet_id = os.getpid() & 0xffff
@@ -81,6 +97,14 @@ def send_file(filename, target='127.0.0.1', chunk_size=4):
 
         print("✓ Transmisión completada")
 
+    except KeyboardInterrupt:
+        print("\n\n⚠️  Interrupción detectada")
+        if confirm_action("¿Cancelar transmisión? (s/n): "):
+            print("Transmisión cancelada")
+            sys.exit(0)
+        else:
+            print("Continuando...\n")
+            raise
     except PermissionError:
         print("Error: Se requieren permisos de administrador/root")
         if system == "Windows":

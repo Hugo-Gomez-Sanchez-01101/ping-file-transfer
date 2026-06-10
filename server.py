@@ -143,6 +143,21 @@ def list_interfaces():
     print("=" * 80 + "\n")
     return interfaces
 
+def confirm_action(message="¿Estás seguro? (s/n): "):
+    """Pedir confirmación al usuario."""
+    while True:
+        try:
+            response = input(message).strip().lower()
+            if response in ['s', 'si', 'yes', 'y']:
+                return True
+            elif response in ['n', 'no']:
+                return False
+            else:
+                print("Por favor, responde 's' o 'n'")
+        except KeyboardInterrupt:
+            print()
+            return False
+
 def select_interface_interactive():
     """Permitir al usuario seleccionar una interfaz interactivamente."""
     interfaces = list_interfaces()
@@ -170,8 +185,10 @@ def select_interface_interactive():
             print(f"Error: '{user_input}' no es válido. Intenta con un ID (1-{len(interfaces)}) o nombre")
 
         except KeyboardInterrupt:
-            print("\nCancelado")
-            return None
+            print("\n¿Cancelar selección de interfaz?")
+            if confirm_action("¿Estás seguro? (s/n): "):
+                print("Cancelado")
+                return None
 
 def main():
     global reconstructed_data, packet_count
@@ -218,6 +235,7 @@ def main():
 
     try:
         print(f"Escuchando en interfaz: {selected_iface}\n")
+        print("Presiona Ctrl+C para detener\n")
         sniff(prn=packet_callback, filter="icmp", store=False, iface=selected_iface)
 
     except PermissionError:
@@ -232,7 +250,15 @@ def main():
             sys.exit(1)
         raise
     except KeyboardInterrupt:
-        pass
+        print("\n\n⚠️  Interrupción detectada")
+        if confirm_action("¿Cerrar servidor y guardar datos? (s/n): "):
+            print("Cerrando...")
+        else:
+            print("Continuando escucha...\n")
+            try:
+                sniff(prn=packet_callback, filter="icmp", store=False, iface=selected_iface)
+            except KeyboardInterrupt:
+                print("\n\n⚠️  Segunda interrupción - cerrando")
     finally:
         if reconstructed_data:
             output_file = 'received_file'
