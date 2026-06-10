@@ -1,0 +1,97 @@
+# Ping File Transfer
+
+Herramienta que permite transferir archivos a través de paquetes ICMP (ping). Los datos se incrustan en el payload de los paquetes ping y se reconstruyen en el servidor.
+
+## Características
+
+- **Cliente Python**: Lee un archivo y lo envía en chunks a través de paquetes ICMP echo
+- **Servidor Python**: Captura paquetes ICMP y reconstruye el archivo original
+- Compatible con Windows, Linux y macOS
+- Chunks configurables (por defecto 4 bytes)
+
+## Requisitos
+
+- Python 3.6+
+- Permisos de administrador (para acceso a raw sockets ICMP)
+
+## Instalación
+
+```bash
+git clone <repository-url>
+cd ping-file-transfer
+```
+
+## Uso
+
+### 1. Iniciar el servidor (en una terminal como administrador)
+
+```bash
+python server.py
+```
+
+El servidor escuchará paquetes ICMP y mostrará progreso:
+
+```
+Servidor ICMP esperando paquetes ping...
+[Paquete 1] ID: 1234, Seq: 0, Datos: 7f454c46...
+[Paquete 2] ID: 1234, Seq: 1, Datos: 01010100...
+...
+✓ Archivo reconstruido: received_file
+✓ Bytes recibidos: 5232
+```
+
+### 2. Enviar archivo (en otra terminal como administrador)
+
+```bash
+python client.py myfile.bin 127.0.0.1
+```
+
+O con IP específica:
+
+```bash
+python client.py document.pdf 192.168.1.100
+```
+
+## Cómo funciona
+
+1. **Cliente**: 
+   - Lee el archivo en binario
+   - Convierte a hexadecimal
+   - Divide en chunks de 4 bytes (8 caracteres hex)
+   - Envía cada chunk como payload en un paquete ICMP echo request
+
+2. **Servidor**:
+   - Captura paquetes ICMP entrantes
+   - Extrae el payload de cada paquete
+   - Reconstruye el archivo original
+
+3. **Finalización**:
+   - Presionar Ctrl+C en el servidor para detener y guardar
+   - El cliente envía un paquete final con sequence = 0xFFFF como marcador
+
+## Ejemplo
+
+```bash
+# Terminal 1 - Servidor
+python server.py
+
+# Terminal 2 - Cliente
+python client.py photo.jpg 127.0.0.1
+```
+
+Resultado: `received_file` contendrá los datos de `photo.jpg`
+
+## Notas de seguridad
+
+- Este proyecto es educativo/experimental
+- Requiere acceso a raw sockets (administrador)
+- En redes reales, los firewalls pueden bloquear paquetes ICMP anómalos
+- No usar para transferencias sensibles sin encriptación adicional
+
+## Licencia
+
+MIT
+
+## Autor
+
+Created as a proof-of-concept for data exfiltration via ICMP
