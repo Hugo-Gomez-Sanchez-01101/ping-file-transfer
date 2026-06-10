@@ -9,13 +9,13 @@ import os
 import platform
 
 try:
-    from scapy.all import sniff, IP, ICMP, get_if_list
+    from scapy.all import sniff, IP, ICMP, get_if_list, get_if_addr, conf
     SCAPY_AVAILABLE = True
 except ImportError:
     SCAPY_AVAILABLE = False
     print("Instalando scapy...")
     os.system('pip3 install scapy')
-    from scapy.all import sniff, IP, ICMP, get_if_list
+    from scapy.all import sniff, IP, ICMP, get_if_list, get_if_addr, conf
 
 reconstructed_data = bytearray()
 packet_count = 0
@@ -65,14 +65,37 @@ def get_loopback_interface():
             return 'lo0'
     return None
 
+def get_interface_gateway():
+    """Obtener el gateway desde la tabla de rutas de scapy."""
+    try:
+        # Buscar la ruta por defecto (destino 0.0.0.0)
+        for route in conf.route.routes:
+            if route[0] == 0:  # Ruta por defecto
+                return route[2]  # Gateway (posición 2)
+    except:
+        pass
+    return "N/A"
+
 def list_interfaces():
-    """Mostrar todas las interfaces disponibles."""
+    """Mostrar todas las interfaces disponibles con IP y gateway."""
     interfaces = get_if_list()
-    print("Interfaces disponibles:")
-    print("-" * 50)
+    gateway = get_interface_gateway()
+
+    print("\n" + "=" * 70)
+    print("INTERFACES DISPONIBLES")
+    print("=" * 70)
+    print(f"{'Nombre':<20} {'IP':<20} {'Gateway':<20}")
+    print("-" * 70)
+
     for iface in interfaces:
-        print(f"  • {iface}")
-    print("-" * 50)
+        try:
+            ip = get_if_addr(iface)
+        except:
+            ip = "N/A"
+
+        print(f"{iface:<20} {ip:<20} {gateway:<20}")
+
+    print("=" * 70 + "\n")
 
 def main():
     global reconstructed_data, packet_count
