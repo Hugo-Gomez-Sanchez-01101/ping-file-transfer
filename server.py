@@ -52,8 +52,9 @@ def main():
     print()
 
     try:
-        # Capturar paquetes ICMP
-        sniff(prn=packet_callback, filter="icmp", store=False)
+        # Capturar paquetes ICMP en interfaz loopback
+        print("Escuchando en interfaz loopback (lo)...\n")
+        sniff(prn=packet_callback, filter="icmp", store=False, iface='lo')
 
     except KeyboardInterrupt:
         pass
